@@ -4,7 +4,9 @@ import time
 import datetime
 
 session = requests.session()
-headers = {
+headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36'}
+
+headers1 = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36'}
 allsubject = []
 allname = []
@@ -98,11 +100,13 @@ class CxSign():
     def taskactivelist(i):  # 查找签到任务
         global a
         aid = []
-        url = "https://mobilelearn.chaoxing.com/ppt/activeAPI/taskactivelist"
+        url = "https://mobilelearn.chaoxing.com/v2/apis/active/student/activelist?fid=171"
+        url1 = "https://mobilelearn.chaoxing.com/ppt/activeAPI/taskactivelist"
         for index in range(len(allname[i])):
-            payload = {'courseId': str(allcourseid[i][index]), 'classId': str(allclassid[i][index]),
+            payload1 = {'courseId': str(allcourseid[i][index]), 'classId': str(allclassid[i][index]),
                        'uid': cook[i]['UID']}
-            time.sleep(1.5)
+            payload = {'courseId': str(allcourseid[i][index]), 'classId': str(allclassid[i][index])}
+            time.sleep(1)
             print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '用户:', i, '正在查询课程:', allname[i][index])
             res = requests.get(url, params=payload, headers=headers, cookies=cook[i])
             respon = res.status_code
@@ -110,19 +114,23 @@ class CxSign():
             if respon == 200:  # 网页状态码正常
                 # print(res.text)
                 data = json.loads(res.text)
-                # print(data)
-                activeList = data['activeList']  # 把所有任务提出来
-                for item in activeList:  # 轮询所有的任务
-                    if ("nameTwo" not in item):
-                        continue
-                    if (item['activeType'] == 2 and item['status'] == 1):  # 查找进行中的签到任务
-                        # signurl = item['url']  # 提取activePrimaryId
-                        aid = item['id']  # 提取activePrimaryId
-                        if (aid not in activates):  # 查看是否签到过
-                            print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                  '[签到]', allname[i][index], '查询到待签到活动 活动名称:%s 活动状态:%s 活动时间:%s aid:%s' % (
-                                      item['nameOne'], item['nameTwo'], item['nameFour'], aid))
-                            CxSign.sign(aid, i, index)  # 调用签到函数
+                #print(data)
+                #print(data['errorMsg'])
+                if data['errorMsg'] == None:
+                    activeList = data['data']['activeList']  # 把所有任务提出来
+                    for item in activeList:  # 轮询所有的任务
+                        if ("nameTwo" not in item):
+                            continue
+                        if (item['activeType'] == 2 and item['status'] == 1):  # 查找进行中的签到任务
+                            # signurl = item['url']  # 提取activePrimaryId
+                            aid = item['id']  # 提取activePrimaryId
+                            if (aid not in activates):  # 查看是否签到过
+                                print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                    '[签到]', allname[i][index], '查询到待签到活动 活动名称:%s 活动状态:%s 活动时间:%s aid:%s' % (
+                                        item['nameOne'], item['nameTwo'], item['nameFour'], aid))
+                                CxSign.sign(aid, i, index)  # 调用签到函数
+                else:
+                    print('被玩坏啦！！！')
             else:
                 print('error', respon)  # 不知道为啥...
 
@@ -235,6 +243,7 @@ if __name__ == "__main__":
     while 1:
         for o in range(number):
             CxSign.taskactivelist(o)
+            time.sleep(30)
 
 else:
     print("运行于云函数模式")
